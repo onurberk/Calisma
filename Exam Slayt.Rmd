@@ -1,0 +1,204 @@
+---
+title: "IVA-503 SINAV SUNUM"
+author: "Onur Berk"
+date: "28/03/2022"
+output:
+  slidy_presentation: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE)
+```
+
+## Veri Tanima
+
+```{r, message=FALSE,warning=FALSE}
+library(readxl)
+e1 <- read_excel("C:/Users/yonur/Desktop/exams.xlsx")
+e1 <- e1[ -c(4:16)]
+summary(e1)
+```
+## Grafik Bakma
+
+```{r, message=FALSE,warning=FALSE}
+par(mfrow=c(1,2))
+plot(e1$bist100)
+plot(e1$PY)
+
+```
+
+Zamana bağlı olduğu için grafikleri anlamlı değildir.
+
+## Zaman Seri Ve Grafiklerine Bakma
+
+Zamana bağlı olduğu için grafikleri anlamlı hale getirelim
+```{r, echo = TRUE}
+bist100.ts <- ts(e1$bist100)
+py.ts <- ts(e1$PY)
+
+par(mfrow=c(1,2))
+plot.ts(bist100.ts)
+plot.ts(py.ts)
+```
+
+## Getiri Hesaplama
+
+Getiri hesabı derste yapılan yöntemden farklı olarak ln(P1/P0) ile hesapladık
+
+```{r, echo = TRUE}
+rPY<-log((diff(py.ts, lag = 1,diff=1)/lag(py.ts,-1))+1)
+rbist100<-log((diff(bist100.ts, lag = 1,diff=1)/lag(bist100.ts,-1))+1)
+```
+
+Getirilerin grafiklerini aşağıdaki gibi inceledik.
+
+```{r,echo = TRUE}
+par(mfrow=c(1,2))
+plot.ts(rbist100)
+plot.ts(rPY)
+```
+
+## Model Tahmini 
+
+```{r }
+lreg <- lm(rPY~rbist100)
+summary(lreg)
+```
+
+
+Modelimizde Multiple R sq yaklaşık %50 olarak şekillenmiş. Buradan çıkarılacak sonuç, bu modelin bağımlı değişkendeki varyansın sadece %50 ’lik kısmını açıkladığı anlamına geliyor.Öncelikle modelimizin anlamlı olup olmadığının kontrol edilmesi gerekmektedir. Bu nedenle F-testi yardımıyla “p value” kontrol edilir.Modelimizde “p value” 0.05’ten küçük (2.2e-16) olduğu için hipotez reddedilir yani model anlamlıdır.Intercept değeri anlamlı değil iken rbist100 değeri yani anlamlıdır çünkü Pr(>|t| neredeyse sıfırdır.
+
+
+## Zaman Seri ile artık tahmini
+```{r,echo=TRUE,eval=TRUE}
+res <- ts(residuals(lreg))
+res1 <- lag(res,-1)
+```
+
+Korelasyon
+
+```{r,echo=TRUE,eval=TRUE}
+cor(res,res1)
+dres <- data.frame(cbind(res,res1))
+dres <- dres[-c(1,1045),]
+c <- cor(dres$res,dres$res1)
+```
+
+## DW TEST
+
+```{r,message=FALSE,warning=FALSE,echo=FALSE}
+library(car)
+durbinWatsonTest(lreg,max.lag=1)
+```
+
+## BG TEST
+
+```{r,message=FALSE,warning=FALSE,echo=FALSE}
+library(lmtest)
+bgtest(rPY~rbist100,order=4,type=c("Chisq","F"))
+```
+
+## Robust
+
+```{r,message=FALSE,warning=FALSE,echo=FALSE}
+library(sandwich)
+coeftest(lreg,vcov=NeweyWest(lreg))
+
+```
+
+## 2008 Öncesi ve 2010 Sonrasi Veri Tanima 
+
+```{r, message=FALSE,warning=FALSE}
+library(readxl)
+e1 <- read_excel("C:/Users/yonur/Desktop/FDFDS.xlsx")
+e1 <- e1[ -c(4:16)]
+b2008 <- e1[1:408,]
+ea2010 <- e1[462:1045,]
+summary(b2008);
+summary(ea2010)
+```
+
+## 2008 Öncesi ve 2010 Sonrasi Zaman Serisi ve Grafigi 
+
+```{r, message=FALSE,warning=FALSE}
+b08_bist100.ts <- ts(b2008$bist100)
+b08_py.ts <- ts(b2008$PY)
+
+ea10_bist100.ts <- ts(ea2010$bist100)
+ea10_py.ts <- ts(ea2010$PY)
+
+par(mfrow=c(2,2))
+plot.ts(b08_bist100.ts)
+plot.ts(b08_py.ts)
+plot.ts(ea10_bist100.ts)
+plot.ts(ea10_py.ts)
+```
+
+## 2008 Öncesi ve 2010 Sonrasi Getiri Fonksiyonu
+```{r,eval=TRUE,echo=TRUE}
+b08rbist100 <- log((diff(b08_bist100.ts,lag=1, diff=1)/lag(b08_bist100.ts,-1))+1)
+b08rPY <- log((diff(b08_py.ts,lag=1, diff=1)/lag(b08_py.ts,-1))+1)
+ea10rbist100 <- log((diff(ea10_bist100.ts,lag=1, diff=1)/lag(ea10_bist100.ts,-1))+1)
+ea10rPY <- log((diff(ea10_py.ts,lag=1, diff=1)/lag(ea10_py.ts,-1))+1)
+```
+
+2008 Öncesi ve 2010 Sonrasi Getiri  Grafikleri
+ 
+```{r, message=FALSE,warning=FALSE}
+par(mfrow=c(2,2))
+plot.ts(b08rbist100 )
+plot.ts(b08rPY)
+plot.ts(ea10rbist100)
+plot.ts(ea10rPY)
+```
+
+
+## 2008 Öncesi ve 2010 Sonrasi Model Tahmini 
+
+```{r, message=FALSE,warning=FALSE}
+lreg08 <- lm(b08rPY~b08rbist100)
+lreg10 <- lm(ea10rPY~ea10rbist100)
+summary(lreg08)
+summary(lreg10)
+```
+
+## 2008 Öncesi ve 2010 Sonrasi Artiklari ve Korelasyon
+
+```{r, echo=TRUE,eval=TRUE}
+res08 <- ts(residuals(lreg08))
+resb08 <- lag(res08,-1)
+cor(res08,resb08)
+dres08 <- data.frame(cbind(res08,resb08))
+dres08 <- dres08[-c(1,408),]
+e <- cor(dres08$res08,dres08$resb08)
+e
+
+res10 <- ts(residuals(lreg10))
+resa10 <- lag(res10,-1)
+cor(res10,resa10)
+dres10 <- data.frame(cbind(res10,resa10))
+dres10 <- dres10[-c(1,584),]
+f <- cor(dres10$res10,dres10$resa10)
+f
+```
+
+## 2008 Öncesi ve 2010 Sonrasi DW TEST
+```{r, echo=TRUE,eval=TRUE}
+library(car)
+durbinWatsonTest(lreg08,max.lag=1)
+durbinWatsonTest(lreg10,max.lag=1)
+```
+
+## 2008 Öncesi ve 2010 Sonrasi BG TEST
+```{r, echo=TRUE,eval=TRUE}
+library(lmtest)
+bgtest(b08rPY~b08rbist100,order=4,type=c("Chisq","F"))
+bgtest(ea10rPY~ea10rbist100,order=4,type=c("Chisq","F"))
+```
+
+## 2008 Öncesi ve 2010 Sonrasi Robust
+```{r, echo=TRUE,eval=TRUE}
+library(sandwich)
+coeftest(lreg08,vcov=NeweyWest(lreg))
+coeftest(lreg10,vcov=NeweyWest(lreg))
+```
